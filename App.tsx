@@ -6,7 +6,6 @@ import DocumentViewerModal from './components/DocumentViewerModal';
 import { LegalDocument, ChatMessage, MessageRole } from './types';
 import * as StorageService from './services/storage';
 import { analyzeLegalQuery } from './services/geminiService';
-import { DEFAULT_DOCUMENTS } from './services/defaultDocuments';
 
 function App() {
   // State
@@ -27,10 +26,7 @@ function App() {
   useEffect(() => {
     const loadDocs = async () => {
         try {
-            // Thử nạp dữ liệu mẫu nếu DB trống
-            await StorageService.seedDatabase(DEFAULT_DOCUMENTS);
-            
-            // Sau đó tải danh sách
+            // Chỉ tải danh sách hiện có, không tự động nạp thêm gì cả
             const docs = await StorageService.getDocuments();
             setDocuments(docs);
         } catch (error) {
@@ -68,7 +64,6 @@ function App() {
           await StorageService.clearAllDocuments();
           setDocuments([]);
           setViewingDocument(null);
-          // Nạp lại dữ liệu mẫu nếu muốn, hoặc để trống. Ở đây để trống cho sạch.
       }
   };
 

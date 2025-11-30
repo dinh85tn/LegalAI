@@ -103,25 +103,6 @@ export const clearAllDocuments = async (): Promise<void> => {
   });
 };
 
-// --- Seed Default Data ---
-export const seedDatabase = async (defaultDocs: Omit<LegalDocument, 'id' | 'createdAt' | 'category'>[]): Promise<boolean> => {
-    const currentDocs = await getDocuments();
-    
-    // Chỉ nạp dữ liệu mẫu nếu kho đang trống hoàn toàn
-    if (currentDocs.length === 0 && defaultDocs.length > 0) {
-        const docsToAdd: LegalDocument[] = defaultDocs.map((d, index) => ({
-            id: `default_${index}_${Date.now()}`,
-            title: d.title,
-            content: d.content,
-            category: 'default',
-            createdAt: Date.now() - index * 1000 // Stagger times slightly
-        }));
-        await saveDocuments(docsToAdd);
-        return true;
-    }
-    return false;
-};
-
 // --- Backup & Restore Utils ---
 
 export const exportData = async (): Promise<void> => {
