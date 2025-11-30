@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LegalDocument } from '../types';
-import { FileTextIcon, PlusIcon, TrashIcon, EyeIcon, DownloadIcon, UploadCloudIcon, KeyIcon } from './Icon';
+import { FileTextIcon, PlusIcon, TrashIcon, EyeIcon, DownloadIcon, UploadCloudIcon, SettingsIcon } from './Icon';
 
 interface SidebarProps {
   documents: LegalDocument[];
@@ -12,11 +12,11 @@ interface SidebarProps {
   onBackup: () => void;
   onRestore: () => void;
   onClearAll: () => void;
-  onConfigKey: () => void;
+  onConfigSettings: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
-    documents, onAddDocument, onSelectDocument, onDeleteDocument, isOpen, onClose, onBackup, onRestore, onClearAll, onConfigKey
+    documents, onAddDocument, onSelectDocument, onDeleteDocument, isOpen, onClose, onBackup, onRestore, onClearAll, onConfigSettings
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -147,12 +147,12 @@ const Sidebar: React.FC<SidebarProps> = ({
              </button>
          </div>
          <button 
-            onClick={onConfigKey}
+            onClick={onConfigSettings}
             className="w-full flex items-center justify-center gap-1.5 p-2 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 transition-colors border border-slate-700 mb-2"
-            title="Cập nhật hoặc xóa API Key"
+            title="Cập nhật API Key & Định nghĩa"
          >
-             <KeyIcon />
-             <span>Cấu hình API Key</span>
+             <SettingsIcon />
+             <span>Cài đặt hệ thống</span>
          </button>
          {documents.length > 0 && (
              <button 

@@ -3,12 +3,13 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import DocumentUploadModal from './components/DocumentUploadModal';
 import DocumentViewerModal from './components/DocumentViewerModal';
-import ApiKeyModal from './components/ApiKeyModal';
+import SettingsModal from './components/SettingsModal';
 import { LegalDocument, ChatMessage, MessageRole } from './types';
 import * as StorageService from './services/storage';
-import { analyzeLegalQuery } from './services/geminiService';
+import { analyzeLegalQuery, DEFAULT_SYSTEM_INSTRUCTION } from './services/geminiService';
 
 const API_KEY_STORAGE = 'gemini_api_key';
+const INSTRUCTION_STORAGE = 'legal_ai_instruction';
 
 function App() {
   // State
@@ -19,9 +20,10 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // API Key State
+  // Settings State
   const [apiKey, setApiKey] = useState('');
-  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const [systemInstruction, setSystemInstruction] = useState('');
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // New State for Viewing Document
   const [viewingDocument, setViewingDocument] = useState<LegalDocument | null>(null);
@@ -42,23 +44,28 @@ function App() {
     };
     loadDocs();
 
-    // Load API Key from LocalStorage
+    // Load Settings from LocalStorage
     const savedKey = localStorage.getItem(API_KEY_STORAGE);
-    if (savedKey) {
-        setApiKey(savedKey);
+    const savedInstruction = localStorage.getItem(INSTRUCTION_STORAGE);
+    
+    if (savedKey) setApiKey(savedKey);
+    if (savedInstruction) {
+        setSystemInstruction(savedInstruction);
     } else {
-        // Nếu không có key trong storage và không có trong env (production), thì mở modal
-        // Lưu ý: Nếu có process.env.API_KEY thì vẫn dùng được, nhưng ưu tiên hỏi user để họ chủ động
-        // Tuy nhiên, để trải nghiệm tốt nhất, ta check cả 2
-        // Ở đây ta cứ mở modal nếu chưa lưu, người dùng có thể đóng nếu họ biết key đã set ở env
-        setIsKeyModalOpen(true);
+        setSystemInstruction(DEFAULT_SYSTEM_INSTRUCTION);
+    }
+
+    // Nếu không có key, mở modal settings
+    if (!savedKey && !process.env.API_KEY) {
+        setIsSettingsModalOpen(true);
     }
   }, []);
 
-  const saveApiKey = (key: string) => {
+  const handleSaveSettings = (key: string, instruction: string) => {
       localStorage.setItem(API_KEY_STORAGE, key);
+      localStorage.setItem(INSTRUCTION_STORAGE, instruction);
       setApiKey(key);
-      setIsKeyModalOpen(false);
+      setSystemInstruction(instruction);
   };
 
   const handleAddDocuments = async (newDocs: {title: string, content: string}[]) => {
@@ -126,7 +133,7 @@ function App() {
     if (!input.trim() || isLoading) return;
 
     if (!apiKey && !process.env.API_KEY) {
-        setIsKeyModalOpen(true);
+        setIsSettingsModalOpen(true);
         return;
     }
 
@@ -142,7 +149,13 @@ function App() {
     setIsLoading(true);
 
     try {
-      const answer = await analyzeLegalQuery(userMsg.text, documents, messages, apiKey);
+      const answer = await analyzeLegalQuery(
+          userMsg.text, 
+          documents, 
+          messages, 
+          apiKey,
+          systemInstruction
+      );
       
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -178,7 +191,7 @@ function App() {
         onBackup={handleBackup}
         onRestore={handleRestoreClick}
         onClearAll={handleClearAll}
-        onConfigKey={() => setIsKeyModalOpen(true)}
+        onConfigSettings={() => setIsSettingsModalOpen(true)}
       />
       
       {/* Hidden Restore Input */}
@@ -215,9 +228,12 @@ function App() {
         onSave={handleAddDocuments}
       />
       
-      <ApiKeyModal
-        isOpen={isKeyModalOpen}
-        onSave={saveApiKey}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        savedApiKey={apiKey}
+        savedInstruction={systemInstruction}
+        onSave={handleSaveSettings}
       />
 
       {/* Viewer Modal */}

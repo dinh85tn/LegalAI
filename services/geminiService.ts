@@ -1,7 +1,7 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { LegalDocument, ChatMessage } from '../types';
 
-const SYSTEM_INSTRUCTION = `
+export const DEFAULT_SYSTEM_INSTRUCTION = `
 Bạn là Trợ Lý Pháp Lý Cá Nhân (DINHNV LegalAI).
 Mục đích tồn tại của bạn là giúp người dùng tra cứu thông tin CHÍNH XÁC từ "KHO DỮ LIỆU CÁ NHÂN" mà người dùng đã tải lên.
 
@@ -11,7 +11,7 @@ NGUYÊN TẮC CỐT LÕI (BẮT BUỘC TUÂN THỦ):
 3. **KHÔNG TÌM THẤY**: Nếu câu trả lời không có trong các văn bản được cung cấp, hãy trả lời thẳng thắn: "Thông tin này không có trong kho dữ liệu văn bản hiện tại của bạn."
 4. **TRÍCH DẪN**: Khi trả lời, hãy cố gắng trích dẫn nguồn (VD: Theo Điều 5 của Văn bản X...).
 
-ĐỊNH NGHĨA VÀ QUY ƯỚC VIẾT TẮT (Nếu xuất hiện trong văn bản):
+ĐỊNH NGHĨA VÀ QUY ƯỚC VIẾT TẮT (Bạn có thể cập nhật phần này trong Cài Đặt):
 1. SXBT: Sản xuất bình thường.
 2. CQHC: Cơ quan hành chính.
 3. CQBV: Bệnh viện, trường học.
@@ -25,7 +25,8 @@ export const analyzeLegalQuery = async (
   query: string,
   documents: LegalDocument[],
   history: ChatMessage[],
-  userApiKey?: string
+  userApiKey?: string,
+  customSystemInstruction?: string
 ): Promise<string> => {
 
   try {
@@ -68,7 +69,7 @@ Dựa NHẤT QUÁN và DUY NHẤT vào dữ liệu trên, hãy trả lời câu 
         }
       ],
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
+        systemInstruction: customSystemInstruction || DEFAULT_SYSTEM_INSTRUCTION,
         temperature: 0.1, // Giảm temperature để tăng độ chính xác, giảm sáng tạo
       }
     });
