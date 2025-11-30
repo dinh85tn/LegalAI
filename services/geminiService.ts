@@ -28,8 +28,13 @@ export const analyzeLegalQuery = async (
 ): Promise<string> => {
 
   try {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+        throw new Error("Hệ thống chưa tìm thấy API Key. Vui lòng kiểm tra file vite.config.ts hoặc cấu hình Environment Variables trên Vercel.");
+    }
+
     // Initialize AI with process.env.API_KEY
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: apiKey });
 
     // 1. Prepare Context from Documents
     // Với Gemini Flash 2.5 (1M context), ta có thể đẩy toàn bộ văn bản vào.
@@ -76,7 +81,7 @@ Dựa NHẤT QUÁN và DUY NHẤT vào dữ liệu trên, hãy trả lời câu 
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     if (error.message?.includes('403') || error.toString().includes('API key')) {
-        throw new Error("Lỗi xác thực API Key. Vui lòng kiểm tra cấu hình biến môi trường.");
+        throw new Error("Lỗi xác thực API Key. Key hiện tại có thể không hợp lệ hoặc đã hết hạn.");
     }
     throw new Error("Đã xảy ra lỗi khi kết nối với LegalAI: " + error.message);
   }
