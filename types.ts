@@ -1,3 +1,4 @@
+
 export interface LegalDocument {
   id: string;
   title: string;
@@ -23,3 +24,5 @@ export interface LoadingState {
   isLoading: boolean;
   message?: string;
 }
+
+export type AIProvider = 'gemini' | 'openai' | 'huggingface' | 'claude';

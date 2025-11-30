@@ -1,15 +1,26 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import DocumentUploadModal from './components/DocumentUploadModal';
 import DocumentViewerModal from './components/DocumentViewerModal';
 import SettingsModal from './components/SettingsModal';
-import { LegalDocument, ChatMessage, MessageRole } from './types';
+import { LegalDocument, ChatMessage, MessageRole, AIProvider } from './types';
 import * as StorageService from './services/storage';
 import { analyzeLegalQuery, DEFAULT_SYSTEM_INSTRUCTION } from './services/geminiService';
 
 const API_KEY_STORAGE = 'gemini_api_key';
+const OPENAI_KEY_STORAGE = 'openai_api_key';
+const HF_KEY_STORAGE = 'hf_api_key';
+const CLAUDE_KEY_STORAGE = 'claude_api_key';
+
+const GEMINI_MODEL_STORAGE = 'gemini_model';
+const OPENAI_MODEL_STORAGE = 'openai_model';
+const HF_MODEL_STORAGE = 'hf_model';
+const CLAUDE_MODEL_STORAGE = 'claude_model';
+
 const INSTRUCTION_STORAGE = 'legal_ai_instruction';
+const PROVIDER_STORAGE = 'selected_ai_provider';
 
 function App() {
   // State
@@ -20,9 +31,20 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Settings State
-  const [apiKey, setApiKey] = useState('');
+  // Settings State - Keys
+  const [geminiKey, setGeminiKey] = useState('');
+  const [openAIKey, setOpenAIKey] = useState('');
+  const [hfKey, setHfKey] = useState('');
+  const [claudeKey, setClaudeKey] = useState('');
+
+  // Settings State - Models
+  const [geminiModel, setGeminiModel] = useState('');
+  const [openAIModel, setOpenAIModel] = useState('');
+  const [hfModel, setHfModel] = useState('');
+  const [claudeModel, setClaudeModel] = useState('');
+  
   const [systemInstruction, setSystemInstruction] = useState('');
+  const [activeProvider, setActiveProvider] = useState<AIProvider>('gemini');
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // New State for Viewing Document
@@ -35,7 +57,6 @@ function App() {
   useEffect(() => {
     const loadDocs = async () => {
         try {
-            // Chỉ tải danh sách hiện có, không tự động nạp thêm gì cả
             const docs = await StorageService.getDocuments();
             setDocuments(docs);
         } catch (error) {
@@ -44,28 +65,74 @@ function App() {
     };
     loadDocs();
 
-    // Load Settings from LocalStorage
-    const savedKey = localStorage.getItem(API_KEY_STORAGE);
-    const savedInstruction = localStorage.getItem(INSTRUCTION_STORAGE);
+    // Load Settings
+    const savedGeminiKey = localStorage.getItem(API_KEY_STORAGE);
+    const savedOpenAIKey = localStorage.getItem(OPENAI_KEY_STORAGE);
+    const savedHfKey = localStorage.getItem(HF_KEY_STORAGE);
+    const savedClaudeKey = localStorage.getItem(CLAUDE_KEY_STORAGE);
     
-    if (savedKey) setApiKey(savedKey);
+    const savedGeminiModel = localStorage.getItem(GEMINI_MODEL_STORAGE);
+    const savedOpenAIModel = localStorage.getItem(OPENAI_MODEL_STORAGE);
+    const savedHfModel = localStorage.getItem(HF_MODEL_STORAGE);
+    const savedClaudeModel = localStorage.getItem(CLAUDE_MODEL_STORAGE);
+
+    const savedInstruction = localStorage.getItem(INSTRUCTION_STORAGE);
+    const savedProvider = localStorage.getItem(PROVIDER_STORAGE) as AIProvider;
+    
+    if (savedGeminiKey) setGeminiKey(savedGeminiKey);
+    if (savedOpenAIKey) setOpenAIKey(savedOpenAIKey);
+    if (savedHfKey) setHfKey(savedHfKey);
+    if (savedClaudeKey) setClaudeKey(savedClaudeKey);
+
+    if (savedGeminiModel) setGeminiModel(savedGeminiModel);
+    if (savedOpenAIModel) setOpenAIModel(savedOpenAIModel);
+    if (savedHfModel) setHfModel(savedHfModel);
+    if (savedClaudeModel) setClaudeModel(savedClaudeModel);
+
+    if (savedProvider) setActiveProvider(savedProvider);
+
     if (savedInstruction) {
         setSystemInstruction(savedInstruction);
     } else {
         setSystemInstruction(DEFAULT_SYSTEM_INSTRUCTION);
     }
 
-    // Nếu không có key, mở modal settings
-    if (!savedKey && !process.env.API_KEY) {
+    // Force settings open if no keys at all
+    if (!savedGeminiKey && !savedOpenAIKey && !savedHfKey && !savedClaudeKey && !process.env.API_KEY) {
         setIsSettingsModalOpen(true);
     }
   }, []);
 
-  const handleSaveSettings = (key: string, instruction: string) => {
-      localStorage.setItem(API_KEY_STORAGE, key);
+  const handleSaveSettings = (
+      gKey: string, oKey: string, hKey: string, cKey: string, 
+      gModel: string, oModel: string, hModel: string, cModel: string,
+      instruction: string, provider: AIProvider
+  ) => {
+      localStorage.setItem(API_KEY_STORAGE, gKey);
+      localStorage.setItem(OPENAI_KEY_STORAGE, oKey);
+      localStorage.setItem(HF_KEY_STORAGE, hKey);
+      localStorage.setItem(CLAUDE_KEY_STORAGE, cKey);
+
+      localStorage.setItem(GEMINI_MODEL_STORAGE, gModel);
+      localStorage.setItem(OPENAI_MODEL_STORAGE, oModel);
+      localStorage.setItem(HF_MODEL_STORAGE, hModel);
+      localStorage.setItem(CLAUDE_MODEL_STORAGE, cModel);
+
       localStorage.setItem(INSTRUCTION_STORAGE, instruction);
-      setApiKey(key);
+      localStorage.setItem(PROVIDER_STORAGE, provider);
+      
+      setGeminiKey(gKey);
+      setOpenAIKey(oKey);
+      setHfKey(hKey);
+      setClaudeKey(cKey);
+
+      setGeminiModel(gModel);
+      setOpenAIModel(oModel);
+      setHfModel(hModel);
+      setClaudeModel(cModel);
+
       setSystemInstruction(instruction);
+      setActiveProvider(provider);
   };
 
   const handleAddDocuments = async (newDocs: {title: string, content: string}[]) => {
@@ -78,7 +145,6 @@ function App() {
     }));
     
     await StorageService.saveDocuments(docsToAdd);
-    // Reload from DB to ensure sort order
     const updatedDocs = await StorageService.getDocuments();
     setDocuments(updatedDocs);
   };
@@ -132,7 +198,30 @@ function App() {
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    if (!apiKey && !process.env.API_KEY) {
+    // Determine current key and model based on provider
+    let currentKey = '';
+    let currentModel = '';
+
+    switch(activeProvider) {
+        case 'gemini': 
+            currentKey = geminiKey || process.env.API_KEY || ''; 
+            currentModel = geminiModel;
+            break;
+        case 'openai': 
+            currentKey = openAIKey; 
+            currentModel = openAIModel;
+            break;
+        case 'huggingface': 
+            currentKey = hfKey; 
+            currentModel = hfModel;
+            break;
+        case 'claude': 
+            currentKey = claudeKey; 
+            currentModel = claudeModel;
+            break;
+    }
+
+    if (!currentKey) {
         setIsSettingsModalOpen(true);
         return;
     }
@@ -153,8 +242,10 @@ function App() {
           userMsg.text, 
           documents, 
           messages, 
-          apiKey,
-          systemInstruction
+          currentKey, // Pass specific key
+          systemInstruction,
+          activeProvider, // Pass provider
+          currentModel // Pass model
       );
       
       const botMsg: ChatMessage = {
@@ -204,7 +295,6 @@ function App() {
       />
       
       <main className="flex-1 flex flex-col h-full relative w-full">
-        {/* Overlay for mobile sidebar */}
         {isSidebarOpen && (
             <div 
                 className="absolute inset-0 bg-black/50 z-30 md:hidden"
@@ -231,8 +321,19 @@ function App() {
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
-        savedApiKey={apiKey}
+        
+        savedGeminiKey={geminiKey}
+        savedOpenAIKey={openAIKey}
+        savedHuggingFaceKey={hfKey}
+        savedClaudeKey={claudeKey}
+
+        savedGeminiModel={geminiModel}
+        savedOpenAIModel={openAIModel}
+        savedHfModel={hfModel}
+        savedClaudeModel={claudeModel}
+
         savedInstruction={systemInstruction}
+        savedProvider={activeProvider}
         onSave={handleSaveSettings}
       />
 
