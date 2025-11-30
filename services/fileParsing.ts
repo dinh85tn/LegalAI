@@ -83,9 +83,10 @@ const parseLegacyDoc = async (file: File): Promise<string> => {
             
             if (matches && matches.length > 0) {
                 const cleanedText = matches.join('\n');
-                resolve(`[WARNING: Nội dung được trích xuất từ file .doc nhị phân. Định dạng có thể không chính xác]\n\n${cleanedText}`);
+                // Removed the scary "[WARNING]" header. Added a subtle footer note instead.
+                resolve(`${cleanedText}\n\n*(Lưu ý: Nội dung được trích xuất thô từ file .doc cũ. Để có kết quả tốt nhất, hãy sử dụng định dạng .docx)*`);
             } else {
-                reject(new Error("Không thể đọc nội dung file .doc này. Vui lòng chuyển sang định dạng .docx"));
+                reject(new Error("Không thể đọc nội dung file .doc này. Vui lòng chuyển đổi sang .docx (Word mới) để hệ thống xử lý tốt nhất."));
             }
         };
         reader.onerror = () => reject(new Error("Lỗi đọc file"));
