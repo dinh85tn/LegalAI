@@ -3,9 +3,12 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import DocumentUploadModal from './components/DocumentUploadModal';
 import DocumentViewerModal from './components/DocumentViewerModal';
+import ApiKeyModal from './components/ApiKeyModal';
 import { LegalDocument, ChatMessage, MessageRole } from './types';
 import * as StorageService from './services/storage';
 import { analyzeLegalQuery } from './services/geminiService';
+
+const API_KEY_STORAGE = 'gemini_api_key';
 
 function App() {
   // State
@@ -16,6 +19,10 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
+  // API Key State
+  const [apiKey, setApiKey] = useState('');
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+
   // New State for Viewing Document
   const [viewingDocument, setViewingDocument] = useState<LegalDocument | null>(null);
 
@@ -34,7 +41,25 @@ function App() {
         }
     };
     loadDocs();
+
+    // Load API Key from LocalStorage
+    const savedKey = localStorage.getItem(API_KEY_STORAGE);
+    if (savedKey) {
+        setApiKey(savedKey);
+    } else {
+        // Nếu không có key trong storage và không có trong env (production), thì mở modal
+        // Lưu ý: Nếu có process.env.API_KEY thì vẫn dùng được, nhưng ưu tiên hỏi user để họ chủ động
+        // Tuy nhiên, để trải nghiệm tốt nhất, ta check cả 2
+        // Ở đây ta cứ mở modal nếu chưa lưu, người dùng có thể đóng nếu họ biết key đã set ở env
+        setIsKeyModalOpen(true);
+    }
   }, []);
+
+  const saveApiKey = (key: string) => {
+      localStorage.setItem(API_KEY_STORAGE, key);
+      setApiKey(key);
+      setIsKeyModalOpen(false);
+  };
 
   const handleAddDocuments = async (newDocs: {title: string, content: string}[]) => {
     const docsToAdd: LegalDocument[] = newDocs.map((d, index) => ({
@@ -100,6 +125,11 @@ function App() {
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
+    if (!apiKey && !process.env.API_KEY) {
+        setIsKeyModalOpen(true);
+        return;
+    }
+
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: MessageRole.USER,
@@ -112,7 +142,7 @@ function App() {
     setIsLoading(true);
 
     try {
-      const answer = await analyzeLegalQuery(userMsg.text, documents, messages);
+      const answer = await analyzeLegalQuery(userMsg.text, documents, messages, apiKey);
       
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -148,6 +178,7 @@ function App() {
         onBackup={handleBackup}
         onRestore={handleRestoreClick}
         onClearAll={handleClearAll}
+        onConfigKey={() => setIsKeyModalOpen(true)}
       />
       
       {/* Hidden Restore Input */}
@@ -184,6 +215,11 @@ function App() {
         onSave={handleAddDocuments}
       />
       
+      <ApiKeyModal
+        isOpen={isKeyModalOpen}
+        onSave={saveApiKey}
+      />
+
       {/* Viewer Modal */}
       <DocumentViewerModal 
         document={viewingDocument}

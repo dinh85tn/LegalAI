@@ -24,21 +24,22 @@ NGUYÊN TẮC CỐT LÕI (BẮT BUỘC TUÂN THỦ):
 export const analyzeLegalQuery = async (
   query: string,
   documents: LegalDocument[],
-  history: ChatMessage[]
+  history: ChatMessage[],
+  userApiKey?: string
 ): Promise<string> => {
 
   try {
-    const apiKey = process.env.API_KEY;
+    // Ưu tiên sử dụng Key người dùng nhập. Nếu không có mới tìm trong biến môi trường (dành cho bản deploy riêng)
+    const apiKey = userApiKey || process.env.API_KEY;
+
     if (!apiKey) {
-        throw new Error("Hệ thống chưa tìm thấy API Key. Vui lòng kiểm tra file vite.config.ts hoặc cấu hình Environment Variables trên Vercel.");
+        throw new Error("Chưa có API Key. Vui lòng nhập API Key trong phần Cài đặt.");
     }
 
-    // Initialize AI with process.env.API_KEY
+    // Initialize AI with the key
     const ai = new GoogleGenAI({ apiKey: apiKey });
 
     // 1. Prepare Context from Documents
-    // Với Gemini Flash 2.5 (1M context), ta có thể đẩy toàn bộ văn bản vào.
-    // Tuy nhiên nếu số lượng quá lớn, cần cân nhắc strategy khác (hiện tại hỗ trợ tốt ~50-100 văn bản dài).
     let contextData = "--- KHO DỮ LIỆU CÁ NHÂN CỦA NGƯỜI DÙNG ---\n";
     
     if (documents.length === 0) {
@@ -80,8 +81,8 @@ Dựa NHẤT QUÁN và DUY NHẤT vào dữ liệu trên, hãy trả lời câu 
 
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    if (error.message?.includes('403') || error.toString().includes('API key')) {
-        throw new Error("Lỗi xác thực API Key. Key hiện tại có thể không hợp lệ hoặc đã hết hạn.");
+    if (error.message?.includes('403') || error.toString().includes('API key') || error.message?.includes('400')) {
+        throw new Error("Lỗi xác thực API Key. Key hiện tại không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra lại trong phần Cài đặt.");
     }
     throw new Error("Đã xảy ra lỗi khi kết nối với LegalAI: " + error.message);
   }
